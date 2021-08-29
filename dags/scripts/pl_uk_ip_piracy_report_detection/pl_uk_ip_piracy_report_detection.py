@@ -1,11 +1,14 @@
 import numpy as np
 import pandas as pd
 from sklearn import preprocessing
+from datetime import datetime
 
 # Define config constants
 BUCKET_NAME = "europe-west1-piracy-2e452739-bucket"
 SQL_PL_FIXTURES = "SQL_PL_FIXTURES.txt"
 SQL_IP_TRAFFICS = "SQL_IP_TRAFFICS.txt"
+
+CSVS_DIR = "~/Desktop/project/Archive/traffic and fixtures/"
 
 
 def read_pl_fixtures():
@@ -22,7 +25,7 @@ def read_pl_fixtures():
     """
 
     # Run the premier league fixtures query and convert the result to dataframe.
-    pl_fixtures = pd.read_csv("../../../traffic and fixtures/fixtures.csv")
+    pl_fixtures = pd.read_csv(CSVS_DIR + "fixtures.csv")
     pl_fixtures['date'] = pd.to_datetime(pl_fixtures['date'])
 
     return pl_fixtures
@@ -42,7 +45,7 @@ def read_traffic():
          ip_traffic (DataFrame): Traffic data for ds
 
     """
-    ip_traffic = pd.read_csv("../../../traffic and fixtures/tmp_traffic_20210412.csv")
+    ip_traffic = pd.read_csv(CSVS_DIR + "tmp_traffic_20210412.csv")
     ip_traffic = ip_traffic[ip_traffic['gbps_day'] > 1]
     ip_traffic = ip_traffic.sort_values(['bf_date', 'ip', 'bf_time'], ascending=[True, True, True])
 
@@ -67,7 +70,9 @@ def model_one(ip_traffic, pl_fixtures, match_date):
     # create a dictionary of game dates and times
     pl_games = {}
     match_dates = list(set(pl_fixtures['date']))
-    match_dates = [str(match_date.date()) for match_date in match_dates]
+
+    match_date = pd.to_datetime(match_date)
+
     for md in match_dates:
         pl_games[md] = list(pl_fixtures[pl_fixtures['date'] == md]['ko_time'].unique())
 
@@ -106,8 +111,8 @@ def model_one(ip_traffic, pl_fixtures, match_date):
         ip_pirate_list = pd.DataFrame(ip_pirate_list.index.get_level_values(0))
 
         # write the identified ip list in the google storage
-        blob_name = 'ips_' + match_date.replace('-','') + "_" + str(pl_games[match_date][match_time]).replace(':','')[0:4] + "_UTC.csv"
-        pd.DataFrame(data=ip_pirate_list).to_csv(path_or_buf=blob_name, index=False, encoding="UTF-8")
+        blob_name = 'ips_' + (str(match_date).split()[0]).replace('-','') + "_" + str(pl_games[match_date][match_time]).replace(':','')[0:4] + "_UTC.csv"
+        pd.DataFrame(data=ip_pirate_list).to_csv(path_or_buf=CSVS_DIR + 'result/' + blob_name, index=False, encoding="UTF-8")
 
         # move to the next game for the current match date
         blob_list += [blob_name]
@@ -115,3 +120,7 @@ def model_one(ip_traffic, pl_fixtures, match_date):
         count += 2
 
     return blob_list
+
+a = read_pl_fixtures()
+b = read_traffic()
+model_one(b, a, str(datetime(2021, 4, 12)))
