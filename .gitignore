@@ -1,2 +1,5 @@
 # data
 traffic and fixtures/
+
+#pycache
+__pycache__/
