@@ -1,8 +1,8 @@
 from datetime import timedelta, datetime
-from airflow import DAG
-from airflow.operators.python import PythonOperator, ShortCircuitOperator
-from common.functions.gen_utils import read_config, read_query
-from scripts.pl_uk_ip_piracy_report_traffic.pl_uk_ip_piracy_report_traffic import main as tmp_name
+from airflow.models import DAG
+from airflow.operators.python_operator import PythonOperator, ShortCircuitOperator
+#from common.functions.gen_utils import read_config, read_query
+#from scripts.pl_uk_ip_piracy_report_traffic.pl_uk_ip_piracy_report_traffic import main as tmp_name
 from scripts.pl_uk_ip_piracy_report_detection.pl_uk_ip_piracy_report_detection import read_pl_fixtures, read_traffic, model_one
 import pandas as pd
 
@@ -114,11 +114,11 @@ ml_model_one_op = PythonOperator(
     python_callable=ml_model_one_func,
     dag=dag)
 
-piracy_report_op = PythonOperator(
-    task_id='piracy_report',
-    provide_context=True,
-    python_callable=tmp_name,
-    dag=dag)
+# piracy_report_op = PythonOperator(
+#     task_id='piracy_report',
+#     provide_context=True,
+#     python_callable=tmp_name,
+#     dag=dag)
 
 # Define sequence of running task
-fixtures_check_op >> shrt_cr_op >> ml_model_one_op >> piracy_report_op
+fixtures_check_op >> shrt_cr_op >> ml_model_one_op # >> piracy_report_op
