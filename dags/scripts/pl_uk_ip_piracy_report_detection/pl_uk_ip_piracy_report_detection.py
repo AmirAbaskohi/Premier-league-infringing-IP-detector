@@ -120,7 +120,3 @@ def model_one(ip_traffic, pl_fixtures, match_date):
         count += 2
 
     return blob_list
-
-a = read_pl_fixtures()
-b = read_traffic()
-model_one(b, a, str(datetime(2021, 4, 12)))
