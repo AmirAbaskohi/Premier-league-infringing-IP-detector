@@ -20,7 +20,7 @@ dag = DAG(dag_id='pl_uk_ip_piracy_report_dag', default_args=args,
           schedule_interval=timedelta(days=1))
 
 
-def fixtures_check_func(**context):
+def fixtures_check_func(**kwargs):
     """
     first task that just read a csv file of matchs time from bigquery and send a value to branch tasks,
      which show if there is a match today or not
@@ -51,8 +51,8 @@ def fixtures_check_func(**context):
         cnd = -1
 
     # send the condition (cnd) parameter to Xcom
-    task_instance = context['task_instance']
-    task_instance.xcom_push(key="Match Day", value=cnd)
+    ti = kwargs['ti']
+    ti.xcom_push(key="Match Day", value=cnd)
 
 
 def selector_func(**kwargs):
@@ -67,13 +67,16 @@ def selector_func(**kwargs):
     # pull the condition parameter from the Xcom.
     ti = kwargs['ti']
     cnd = ti.xcom_pull(task_ids='fixtures_check', key='Match Day')
+
+    print(f"CND = {cnd}")
+
     if cnd == 1:
         return True
     else:
         return False
 
 
-def ml_model_one_func(*context):
+def ml_model_one_func(**kwargs):
     """
      This function runs the traffic query on the dag running date. Then the query results will be analysed by the ML
      Model 1. The ML model 1 identify potential infringing IPs and save them as a csv file in google storage or a table
@@ -90,7 +93,7 @@ def ml_model_one_func(*context):
     blob_list = model_one(ip_traffic, pl_fixtures,  match_date)
 
     # send the blob list to Xcom to piracy report operator
-    task_instance = context['task_instance']
+    task_instance = kwargs['task_instance']
     task_instance.xcom_push(key="Blob List", value=blob_list)
 
 
@@ -104,13 +107,14 @@ fixtures_check_op = PythonOperator(
 
 shrt_cr_op = ShortCircuitOperator(
     task_id='skip_downstream',
-    provide_context=False,
+    provide_context=True,
     python_callable=selector_func,
     dag=dag)
 
 ml_model_one_op = PythonOperator(
     task_id='ml_model_one',
     provide_context=True,
+    xcom_push=True,
     python_callable=ml_model_one_func,
     dag=dag)
 
